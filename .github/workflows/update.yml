@@ -1,0 +1,36 @@
+name: Update Timetable
+
+on:
+  schedule:
+    - cron: '0 22 * * *'    # 每天 UTC 22:00，即北京时间次日 06:00
+  workflow_dispatch:        # 允许在 Actions 页面手动点击运行
+
+permissions:
+  contents: write           # 必须显式声明，否则 GITHUB_TOKEN 默认只读，git push 会失败
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run script
+        env:
+          KB_COOKIE: ${{ secrets.KB_COOKIE }}   # 把 Secret 注入为环境变量
+        run: python main.py
+
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --staged --quiet || git commit -m "Update timetable $(date -u +%Y-%m-%dT%H:%M)"
+          git push
